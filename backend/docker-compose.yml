@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: image-moderation-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  app:
+    build: .
+    container_name: image-moderation-api
+    ports:
+      - "7000:7000"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - SECRET_KEY=your_super_secret_key
+    volumes:
+      - .:/app
+    restart: unless-stopped
+
+volumes:
+  mongo_data:

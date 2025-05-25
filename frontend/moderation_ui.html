@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Image Moderation UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 2rem;
+      background: #f9f9f9;
+    }
+    h1 { color: #444; }
+    input, button {
+      padding: 8px;
+      margin: 8px 0;
+      font-size: 1rem;
+    }
+    #result {
+      margin-top: 20px;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 6px 10px;
+      border-bottom: 1px solid #ddd;
+    }
+    .accept { color: green; }
+    .reject { color: red; }
+  </style>
+</head>
+<body>
+
+  <h1>Image Moderation</h1>
+
+  <label for="token">API Token:</label><br>
+  <input type="text" id="token" placeholder="Enter your access token"><br>
+
+  <label for="file">Upload Image:</label><br>
+  <input type="file" id="file"><br>
+
+  <button onclick="submitImage()">Submit for Moderation</button>
+
+  <div id="result"></div>
+
+  <script>
+    async function submitImage() {
+      const token = document.getElementById("token").value;
+      const fileInput = document.getElementById("file");
+      const resultDiv = document.getElementById("result");
+
+      if (!token || fileInput.files.length === 0) {
+        alert("Please provide a token and select an image.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", fileInput.files[0]);
+
+      resultDiv.innerHTML = "Processing...";
+
+      try {
+        const response = await fetch("http://localhost:7000/moderate", {
+          method: "POST",
+          headers: {
+            "x-token": token
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || "Moderation failed");
+        }
+
+        const data = await response.json();
+        const result = data.moderation_result;
+
+        let html = `<h3>Result: <span class="${result.action}">${result.action.toUpperCase()}</span></h3>`;
+        html += `<p>Reject Probability: <strong>${(result.reject_probability * 100).toFixed(2)}%</strong></p>`;
+
+        if (result.reasons.length > 0) {
+          html += `<p>Reasons: <ul>`;
+          result.reasons.forEach(reason => {
+            html += `<li>${reason}</li>`;
+          });
+          html += `</ul></p>`;
+        }
+
+        html += `<details><summary>View Full Output</summary><pre>${JSON.stringify(result.full_output, null, 2)}</pre></details>`;
+
+        resultDiv.innerHTML = html;
+
+      } catch (err) {
+        resultDiv.innerHTML = `<p style="color: red;">Error: ${err.message}</p>`;
+      }
+    }
+  </script>
+
+</body>
+</html>
